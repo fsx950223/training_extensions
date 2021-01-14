@@ -18,7 +18,6 @@ import copy
 import logging
 import os
 import sys
-import subprocess
 import tempfile
 import json
 import yaml
@@ -28,6 +27,7 @@ import torch
 from mmcv.utils import Config
 
 from ote.utils import get_file_size_and_sha256
+from ote.utils.misc import run_through_shell
 
 
 class BaseEvaluator(metaclass=ABCMeta):
@@ -85,7 +85,7 @@ class BaseEvaluator(metaclass=ABCMeta):
         res_complexity = os.path.join(work_dir, "complexity.json")
         update_config = ' '.join([f'{k}={v}' for k, v in update_config.items()])
         update_config = f' --update_config {update_config}' if update_config else ''
-        subprocess.run(
+        run_through_shell(
             f'python {tools_dir}/get_flops.py'
             f' {config_path}'
             f' --shape {image_shape}'
