@@ -40,7 +40,8 @@ def relative_abs_error(expected, actual):
     return abs(expected - actual) / expected
 
 def run_tests_by_pattern(folder, pattern, verbose):
-    logging.basicConfig(level=logging.INFO)
+    log_level = logging.DEBUG if verbose else logging.INFO
+    logging.basicConfig(level=log_level)
     if verbose:
         verbosity = 2
     else:

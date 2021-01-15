@@ -90,7 +90,7 @@ class BaseEvaluator(metaclass=ABCMeta):
             f' {config_path}'
             f' --shape {image_shape}'
             f' --out {res_complexity}'
-            f'{update_config}'.split(' '), check=True)
+            f'{update_config}')
 
         with open(res_complexity) as read_file:
             content = json.load(read_file)

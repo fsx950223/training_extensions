@@ -155,6 +155,7 @@ def log_shell_cmd(cmd, prefix='Running through shell cmd'):
     logging.debug(f'{prefix}\n`{cmdstr}\n`')
 
 def run_through_shell(cmd, verbose=True, check=True):
+    assert isinstance(cmd, str)
     log_shell_cmd(cmd)
     return subprocess.run(cmd,
                           shell=True,

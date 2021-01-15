@@ -82,7 +82,7 @@ class MMDetectionTrainer(BaseTrainer):
                           f'{group_as}'
                           f'{update_config}'
                           f'{img_shape}'
-                          f'{out}'.split(' '), check=True)
+                          f'{out}')
 
         with open(tmp_file.name) as src_file:
             content = json.load(src_file)
