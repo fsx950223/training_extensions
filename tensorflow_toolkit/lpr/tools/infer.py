@@ -15,7 +15,7 @@
 # and limitations under the License.
 
 from argparse import ArgumentParser
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import numpy as np
 import cv2
 

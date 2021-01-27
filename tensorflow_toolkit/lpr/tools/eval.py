@@ -14,15 +14,14 @@
 # See the License for the specific language governing permissions
 # and limitations under the License.
 
-from __future__ import print_function
 import argparse
 import os
 import random
 import sys
 import time
 import numpy as np
-import tensorflow as tf
-import tensorflow.contrib.slim as slim
+import tensorflow.compat.v1 as tf
+import tf_slim as slim
 from lpr.trainer import inference
 from lpr.utils import accuracy, dataset_size
 from tfutils.helpers import load_module

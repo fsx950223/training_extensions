@@ -14,13 +14,11 @@
 # See the License for the specific language governing permissions
 # and limitations under the License.
 
-from __future__ import print_function
 import argparse
 import os
 
-import tensorflow as tf
-import tensorflow.contrib.slim as slim
-from tensorflow.python.framework import graph_io
+import tensorflow.compat.v1 as tf
+import tf_slim as slim
 
 from lpr.trainer import inference
 from tfutils.helpers import load_module, execute_mo
@@ -58,8 +56,8 @@ def freezing_graph(config, checkpoint, output_dir):
   sess.run(init)
   saver.restore(sess, checkpoint)
   frozen = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def, ["d_predictions"])
-  tf.train.write_graph(sess.graph, output_dir, 'graph.pbtxt', as_text=True)
-  path_to_frozen_model = graph_io.write_graph(frozen, output_dir, 'graph.pb.frozen', as_text=False)
+  tf.io.write_graph(sess.graph, output_dir, 'graph.pbtxt', as_text=True)
+  path_to_frozen_model = tf.io.write_graph(frozen, output_dir, 'graph.pb.frozen', as_text=False)
   return path_to_frozen_model
 
 def main(_):

@@ -15,8 +15,8 @@
 import re
 import cv2
 import numpy as np
-import tensorflow as tf
-import tensorflow.contrib.slim as slim
+import tensorflow.compat.v1 as tf
+import tf_slim as slim
 from lpr.networks.lprnet import LPRNet
 from spatial_transformer import transformer
 

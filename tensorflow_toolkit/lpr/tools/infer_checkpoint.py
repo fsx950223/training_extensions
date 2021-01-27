@@ -19,8 +19,8 @@ import os
 import random
 import numpy as np
 import cv2
-import tensorflow as tf
-import tensorflow.contrib.slim as slim
+import tensorflow.compat.v1 as tf
+import tf_slim as slim
 from lpr.utils import dataset_size
 from lpr.trainer import inference, decode_beams
 from tfutils.helpers import load_module

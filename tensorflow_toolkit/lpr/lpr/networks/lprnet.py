@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions
 # and limitations under the License.
 
-import tensorflow as tf
-import tensorflow.contrib.slim as slim
+import tensorflow.compat.v1 as tf
+import tf_slim as slim
 
 
 class LPRNet:
