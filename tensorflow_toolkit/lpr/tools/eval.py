@@ -73,7 +73,7 @@ def validate(config):
       inp_data, label_val, file_names = data_input(height, width, channels_num,
                                                    config.eval.file_list_path, batch_size=config.eval.batch_size)
 
-      prob = inference(rnn_cells_num, inp_data, config.num_classes)
+      prob = inference(rnn_cells_num, inp_data, config.num_classes, config.train.apply_stn_aug)
       prob = tf.transpose(prob, (1, 0, 2))  # prepare for CTC
 
       data_length = tf.fill([tf.shape(prob)[1]], tf.shape(prob)[0])  # input seq length, batch size

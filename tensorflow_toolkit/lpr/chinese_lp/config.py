@@ -56,7 +56,7 @@ class train:
   need_to_save_log = True
 
   class execution:
-    CUDA_VISIBLE_DEVICES = "0"  # Environment variable to control CUDA device used for training
+    CUDA_VISIBLE_DEVICES = ""  # Environment variable to control CUDA device used for training
     per_process_gpu_memory_fraction = 0.8  # Fix extra memory allocation issue
     allow_growth = True  # Option which attempts to allocate only as much GPU memory based on runtime allocations
 
@@ -68,7 +68,7 @@ class eval:
   batch_size = 1
 
   class execution:
-    CUDA_VISIBLE_DEVICES = "0"  # Environment variable to control CUDA device used for training
+    CUDA_VISIBLE_DEVICES = ""  # Environment variable to control CUDA device used for training
     per_process_gpu_memory_fraction = 0.8  # Fix extra memory allocation issue
     allow_growth = True  # Option which attempts to allocate only as much GPU memory based on runtime allocations
 
@@ -80,7 +80,7 @@ class infer:
   batch_size = 1
 
   class execution:
-    CUDA_VISIBLE_DEVICES = "0"  # Environment variable to control CUDA device used for training
+    CUDA_VISIBLE_DEVICES = ""  # Environment variable to control CUDA device used for training
     per_process_gpu_memory_fraction = 0.8  # Fix extra memory allocation issue
     allow_growth = True  # Option which attempts to allocate only as much GPU memory based on runtime allocations
 

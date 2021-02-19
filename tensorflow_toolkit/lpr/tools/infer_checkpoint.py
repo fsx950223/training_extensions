@@ -73,7 +73,7 @@ def infer(config):
       inp_data, filenames = data_input(height, width, channels_num, config.infer.file_list_path,
                                        batch_size=config.infer.batch_size)
 
-      prob = inference(rnn_cells_num, inp_data, config.num_classes)
+      prob = inference(rnn_cells_num, inp_data, config.num_classes, config.train.apply_stn_aug, (height, width))
       prob = tf.transpose(prob, (1, 0, 2))  # prepare for CTC
 
       data_length = tf.fill([tf.shape(prob)[1]], tf.shape(prob)[0])  # input seq length, batch size
@@ -81,9 +81,7 @@ def infer(config):
       result = tf.nn.ctc_greedy_decoder(prob, data_length, merge_repeated=True)
 
       predictions = tf.to_int32(result[0][0])
-      d_predictions = tf.sparse_to_dense(predictions.indices,
-                                         [tf.shape(inp_data, out_type=tf.int64)[0], config.max_lp_length],
-                                         predictions.values, default_value=-1, name='d_predictions')
+      d_predictions = tf.sparse.to_dense(predictions, -1)
 
       init = tf.initialize_all_variables()
       saver = tf.train.Saver(write_version=tf.train.SaverDef.V2)

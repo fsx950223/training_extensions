@@ -42,7 +42,7 @@ def freezing_graph(config, checkpoint, output_dir):
   with graph.as_default():
     with slim.arg_scope([slim.batch_norm, slim.dropout], is_training=False):
       input_tensor = tf.placeholder(dtype=tf.float32, shape=shape, name='input')
-      prob = inference(config.rnn_cells_num, input_tensor, config.num_classes)
+      prob = inference(config.rnn_cells_num, input_tensor, config.num_classes, config.train.apply_stn_aug)
       prob = tf.transpose(prob, (1, 0, 2))
       data_length = tf.fill([tf.shape(prob)[1]], tf.shape(prob)[0])
       result = tf.nn.ctc_greedy_decoder(prob, data_length, merge_repeated=True)

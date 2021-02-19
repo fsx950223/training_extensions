@@ -1,7 +1,7 @@
 import tensorflow.compat.v1 as tf
 
 
-def transformer(input_fmap, theta, out_dims=None, **kwargs):
+def transformer(input_fmap, theta, out_dims=None):
     """
     Spatial Transformer Network layer implementation as described in [1].
 

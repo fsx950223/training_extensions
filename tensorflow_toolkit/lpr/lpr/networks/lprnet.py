@@ -95,6 +95,7 @@ class LPRNet:
     with slim.arg_scope([slim.fully_connected, slim.conv2d], activation_fn=tf.nn.relu,
                         normalizer_fn=slim.batch_norm, weights_initializer=tf.truncated_normal_initializer(stddev=0.01),
                         weights_regularizer=slim.l2_regularizer(0.0005)):
+
       cnn = LPRNet.input_block(net_input)
       cnn = LPRNet.basic_block(cnn, 256)
       cnn = LPRNet.convolution_block(cnn, 256, 2)

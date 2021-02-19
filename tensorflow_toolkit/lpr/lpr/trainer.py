@@ -24,12 +24,12 @@ from spatial_transformer import transformer
 class InputData:
   # pylint: disable=too-many-arguments
   def __init__(self, batch_size, input_shape, file_list_path,
-               apply_basic_aug=False, apply_stn_aug=True, apply_blur_aug=False):
+               apply_basic_aug=False, apply_blur_aug=False):
     self.batch_size = batch_size
     self.input_shape = input_shape
     self.file_list_path = file_list_path
     self.apply_basic_aug = apply_basic_aug
-    self.apply_stn_aug = apply_stn_aug
+    # self.apply_stn_aug = apply_stn_aug
     self.apply_blur_aug = apply_blur_aug
 
   def input_fn(self):
@@ -39,8 +39,8 @@ class InputData:
     if self.apply_basic_aug:
       image = augment(image)
 
-    if self.apply_stn_aug:
-      image = augment_with_stn(image)
+    # if self.apply_stn_aug:
+    #   image = augment_with_stn(image)
 
     # blur/sharpen augmentation
     if self.apply_blur_aug:
@@ -59,7 +59,8 @@ def read_data(batch_size, input_shape, file_src):
   image_file = tf.read_file(filename)
 
   height, width, channels_num = input_shape
-  rgb_image = tf.image.decode_png(image_file, channels=channels_num)
+  rgb_image = tf.image.decode_image(image_file, channels=channels_num)
+  rgb_image.set_shape([None, None, 3])
   rgb_image_float = tf.image.convert_image_dtype(rgb_image, tf.float32)
   resized_images = tf.image.resize_images(rgb_image_float, [height, width])
   resized_images.set_shape(input_shape)
@@ -113,8 +114,23 @@ def random_blur(images):
   return np.array(result)
 
 
+def stn_net(input, out_dims):
+  with slim.arg_scope([slim.conv2d], activation_fn=tf.nn.relu, padding='VALID',
+                      weights_initializer=tf.truncated_normal_initializer(stddev=0.01),
+                      weights_regularizer=slim.l2_regularizer(0.0005)):
+    x = slim.conv2d(input, 32, 3, normalizer_fn=lambda x, **normalizer_params: slim.max_pool2d(x, 2, 2))
+    x = slim.conv2d(x, 32, 5, normalizer_fn=lambda x, **normalizer_params: slim.max_pool2d(x, 3, 3))
+    x = slim.fully_connected(slim.flatten(x), 32)
+    init = np.array([[1., 0., 0.], [0., 1., 0.]], dtype='float32').flatten()
+    theta = slim.fully_connected(x, 6, weights_initializer=tf.initializers.zeros(),
+                                 biases_initializer=tf.initializers.constant(init),
+                                 activation_fn=None)
+    return transformer(input, theta, out_dims=out_dims)
+
 # Function for construction whole network
-def inference(rnn_cells_num, input, num_classes):
+def inference(rnn_cells_num, input, num_classes, apply_stn_aug=False, out_dims=None):
+  # if apply_stn_aug:
+  #   input = stn_net(input, out_dims)
   cnn = LPRNet.lprnet(input)
 
   with slim.arg_scope([slim.conv2d, slim.fully_connected],
@@ -126,6 +142,7 @@ def inference(rnn_cells_num, input, num_classes):
     width = int(cnn.get_shape()[2])
     pattern = tf.reshape(pattern, (-1, 1, 1, rnn_cells_num))
     pattern = tf.tile(pattern, [1, 1, width, 1])
+
     # pattern = slim.fully_connected(pattern, num_classes * width, normalizer_fn=None, activation_fn=tf.nn.sigmoid)
     # pattern = tf.reshape(pattern, (-1, 1, width, num_classes))
 
@@ -150,7 +167,7 @@ class CTCUtils:
     batch_size = labels.shape[0]
     for batch_i in range(batch_size):
       label = labels[batch_i]
-      for time, val in enumerate(encode(label.decode('utf-8'), CTCUtils.vocab)):
+      for time, val in enumerate(encode(label, CTCUtils.vocab)):
         x_ix.append([batch_i, time])
         x_val.append(val)
     x_shape = [batch_size, np.asarray(x_ix).max(0)[1] + 1]
