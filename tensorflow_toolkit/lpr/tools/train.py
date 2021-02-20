@@ -19,6 +19,7 @@ import os
 import argparse
 import numpy as np
 import tensorflow.compat.v1 as tf
+tf.disable_eager_execution()
 import tf_slim as slim
 from lpr.trainer import CTCUtils, inference, InputData
 from tfutils.helpers import load_module
@@ -39,44 +40,6 @@ OPTIMIZER_SUMMARIES = [
     "gradient_norm",
     "global_gradient_norm",
 ]
-
-def _clip_gradients_by_norm(grads_and_vars, clip_gradients):
-  """Clips gradients by global norm."""
-  gradients, variables = zip(*grads_and_vars)
-  clipped_gradients, _ = tf.clip_by_global_norm(gradients, clip_gradients)
-  return list(zip(clipped_gradients, variables))
-
-def _multiply_gradients(grads_and_vars, gradient_multipliers):
-  """Multiply specified gradients."""
-  multiplied_grads_and_vars = []
-  for grad, var in grads_and_vars:
-    if (grad is not None and
-        (var in gradient_multipliers or var.name in gradient_multipliers)):
-      key = var if var in gradient_multipliers else var.name
-      multiplier = gradient_multipliers[key]
-      if isinstance(grad, tf.IndexedSlices):
-        grad_values = grad.values * multiplier
-        grad = tf.IndexedSlices(grad_values, grad.indices, grad.dense_shape)
-      else:
-        grad *= tf.cast(multiplier, grad.dtype)
-    multiplied_grads_and_vars.append((grad, var))
-  return multiplied_grads_and_vars
-
-def _add_scaled_noise_to_gradients(grads_and_vars, gradient_noise_scale):
-  """Adds scaled noise from a 0-mean normal distribution to gradients."""
-  gradients, variables = zip(*grads_and_vars)
-  noisy_gradients = []
-  for gradient in gradients:
-    if gradient is None:
-      noisy_gradients.append(None)
-      continue
-    if isinstance(gradient, tf.IndexedSlices):
-      gradient_shape = gradient.dense_shape
-    else:
-      gradient_shape = gradient.get_shape()
-    noise = tf.truncated_normal(gradient_shape) * gradient_noise_scale
-    noisy_gradients.append(gradient + noise)
-  return list(zip(noisy_gradients, variables))
 
 def parse_args():
   parser = argparse.ArgumentParser(description='Perform training of a model')
@@ -114,14 +77,13 @@ def train(config, init_checkpoint):
     prob = tf.transpose(prob, (1, 0, 2))  # prepare for CTC
 
     data_length = tf.fill([tf.shape(prob)[1]], tf.shape(prob)[0])  # input seq length, batch size
-    print(CTCUtils.compute_ctc_from_labels(np.array(["<Zhejiang>LZRPG1"])))
-    ctc = tf.py_func(CTCUtils.compute_ctc_from_labels, [input_labels], [tf.int64, tf.int64, tf.int64])
+    ctc = tf.numpy_function(CTCUtils.compute_ctc_from_labels, [input_labels], [tf.int64, tf.int64, tf.int64])
     ctc_labels = tf.to_int32(tf.SparseTensor(ctc[0], ctc[1], ctc[2]))
 
     predictions = tf.to_int32(
       tf.nn.ctc_beam_search_decoder(prob, data_length, merge_repeated=False, beam_width=10)[0][0])
     tf.sparse.to_dense(predictions, default_value=-1, name='d_predictions')
-    tf.reduce_mean(tf.edit_distance(predictions, ctc_labels, normalize=False), name='error_rate')
+    error_rate = tf.reduce_mean(tf.edit_distance(predictions, ctc_labels, normalize=False), name='error_rate')
 
     loss = tf.reduce_mean(
       tf.nn.ctc_loss(inputs=prob, labels=ctc_labels, sequence_length=data_length, ctc_merge_repeated=True), name='loss')
@@ -136,10 +98,10 @@ def train(config, init_checkpoint):
     saver = tf.train.Saver(max_to_keep=1000, write_version=tf.train.SaverDef.V2, save_relative_paths=True)
 
   conf = tf.ConfigProto()
-  # if hasattr(config.train.execution, 'per_process_gpu_memory_fraction'):
-  #   conf.gpu_options.per_process_gpu_memory_fraction = config.train.execution.per_process_gpu_memory_fraction
-  # if hasattr(config.train.execution, 'allow_growth'):
-  #   conf.gpu_options.allow_growth = config.train.execution.allow_growth
+  if hasattr(config.train.execution, 'per_process_gpu_memory_fraction'):
+    conf.gpu_options.per_process_gpu_memory_fraction = config.train.execution.per_process_gpu_memory_fraction
+  if hasattr(config.train.execution, 'allow_growth'):
+    conf.gpu_options.allow_growth = config.train.execution.allow_growth
 
   session = tf.Session(graph=graph, config=conf)
   coordinator = tf.train.Coordinator()
@@ -164,7 +126,7 @@ def train(config, init_checkpoint):
 
 
   for i in range(config.train.steps):
-    curr_step, curr_learning_rate, curr_loss, curr_opt_loss = session.run([global_step, learning_rate, loss, opt_loss])
+    curr_step, curr_learning_rate, curr_loss, curr_opt_loss, curr_error_rate = session.run([global_step, learning_rate, loss, opt_loss, error_rate])
 
     if i % config.train.display_iter == 0:
       if config.train.need_to_save_log:
@@ -174,12 +136,14 @@ def train(config, init_checkpoint):
                                              tf.Summary.Value(tag='train/learning_rate',
                                                               simple_value=float(curr_learning_rate)),
                                              tf.Summary.Value(tag='train/optimization_loss',
-                                                              simple_value=float(curr_opt_loss))
+                                                              simple_value=float(curr_opt_loss)),
+                                             tf.Summary.Value(tag='train/error_rate',
+                                                              simple_value=float(curr_error_rate))
                                              ]),
                            curr_step)
         writer.flush()
 
-      tf.logging.info('Iteration: ' + str(curr_step) + ', Train loss: ' + str(curr_loss))
+      tf.logging.info(f'Iteration: {curr_step}, Train loss: {curr_loss}, Error rate: {curr_error_rate}')
 
     if ((curr_step % config.train.save_checkpoints_steps == 0 or curr_step == config.train.steps)
         and config.train.need_to_save_weights):
